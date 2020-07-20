@@ -1,12 +1,46 @@
 import 'package:flutter/material.dart';
+import 'package:weather_app/screens/city_screen.dart';
+import 'package:weather_app/services/location.dart';
 import '../utilities/constants.dart';
+import '../services/weather.dart';
 
 class LocationScreen extends StatefulWidget {
+  final locationData;
+  LocationScreen(this.locationData);
+
   @override
   _LocationScreenState createState() => _LocationScreenState();
 }
 
 class _LocationScreenState extends State<LocationScreen> {
+  var locationData;
+  int temperature = 0;
+  String cityName = '';
+  String condition = '';
+  String messageText = '';
+
+  @override
+  void initState() {
+    updateUI(widget.locationData);
+    super.initState();
+  }
+
+  updateUI(dynamic currentData) {
+    if (currentData == null) {
+      messageText = 'We had a problem, try again';
+      return;
+    } else {
+      setState(() {
+        var temp = currentData['main']['temp'];
+        var cond = currentData['weather'][0]['id'];
+        temperature = temp.round();
+        cityName = currentData['name'];
+        condition = WeatherModel().getWeatherIcon(cond);
+        messageText = WeatherModel().getMessage(temperature);
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -29,14 +63,31 @@ class _LocationScreenState extends State<LocationScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: <Widget>[
                   FlatButton(
-                    onPressed: () {},
+                    onPressed: () {
+                      var newLocationData = Location().getWeather();
+                      updateUI(newLocationData);
+                    },
                     child: Icon(
                       Icons.near_me,
                       size: 50.0,
                     ),
                   ),
                   FlatButton(
-                    onPressed: () {},
+                    onPressed: () async {
+                      var typedName = await Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => CityScreen(),
+                        ),
+                      );
+                      if (typedName != null) {
+                        setState(() {
+                          cityName = typedName;
+                        });
+                        var newLocationData = Location().getWeather();
+                        updateUI(newLocationData);
+                      }
+                    },
                     child: Icon(
                       Icons.location_city,
                       size: 50.0,
@@ -44,27 +95,36 @@ class _LocationScreenState extends State<LocationScreen> {
                   ),
                 ],
               ),
-              Padding(
-                padding: EdgeInsets.only(left: 15.0),
-                child: Row(
-                  children: <Widget>[
-                    Text(
-                      '32°',
-                      style: kTempTextStyle,
-                    ),
-                    Text(
-                      '☀️',
-                      style: kConditionTextStyle,
-                    ),
-                  ],
+              Expanded(
+                flex: 2,
+                child: Container(
+                  padding: EdgeInsets.only(left: 15.0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: <Widget>[
+                      Text(
+                        '$temperature',
+                        style: kTempTextStyle,
+                      ),
+                      Text(
+                        condition,
+                        style: kConditionTextStyle,
+                      ),
+                    ],
+                  ),
                 ),
               ),
-              Padding(
-                padding: EdgeInsets.only(right: 15.0),
-                child: Text(
-                  "It's 🍦 time in San Francisco!",
-                  textAlign: TextAlign.right,
-                  style: kMessageTextStyle,
+              Expanded(
+                flex: 3,
+                child: Container(
+                  padding: EdgeInsets.all(10),
+                  child: Text(
+                    cityName.length > 0
+                        ? '$messageText in $cityName'
+                        : '$messageText',
+                    textAlign: TextAlign.center,
+                    style: kMessageTextStyle,
+                  ),
                 ),
               ),
             ],
